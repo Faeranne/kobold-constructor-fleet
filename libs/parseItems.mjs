@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { fs as fsNode } from 'node:fs/promises';
 import { unique, scanFiles } from './utils.mjs';
 
 export async function scanModelFolder(fs){
@@ -16,6 +17,11 @@ export async function scanModelFolder(fs){
     )
   )).flat().filter(entry=>!!entry)
   return modelFiles
+}
+
+export async function scanimageFolder(fs){
+  const imageFiles = await fs.readDir(join('workdir','icon-exports-x128'))
+
 }
 
 export async function fetchModelFiles(fs,modelFiles){
@@ -58,7 +64,7 @@ export function generateItemsFromModels(models){
       })
     }
   })
-  const itemNames = models.map(x=>x.name).filter(x=>!overrides.includes(x.split(":")[0]+":item/"+x.split(":")[1]))
+  const itemNames = models.map(x=>{name:x.name,map:x.name}).filter(x=>!overrides.includes(x.split(":")[0]+":item/"+x.split(":")[1]))
   return itemNames
 }
 
@@ -71,3 +77,7 @@ export async function extractItemsFromTags(tags){
   return unique(items)
 }
 
+export async function parseImages(){
+  const icons = fsNode.readdir(join('workdir','icon-exports-x128'))
+
+}

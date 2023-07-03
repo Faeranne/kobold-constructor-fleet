@@ -3,9 +3,9 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { resolveFileSystem } from "@xmcl/system";
 import { createHash } from "node:crypto";
-import { unique, scanFiles } from './utils.mjs';
-import { scanModelFolder, fetchModelFiles, generateItemsFromModels, extractItemsFromTags } from './parseItems.mjs';
-import { scanTagFolder, fetchTagFiles, mergeTags } from './parseTags.mjs';
+import { unique, scanFiles } from './libs/utils.mjs';
+import { scanModelFolder, fetchModelFiles, generateItemsFromModels, extractItemsFromTags } from './libs/parseItems.mjs';
+import { scanTagFolder, fetchTagFiles, mergeTags } from './libs/parseTags.mjs';
 
 const knownRecipeTypes = {
 }
