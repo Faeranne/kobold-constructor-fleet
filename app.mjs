@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { resolveFileSystem } from "@xmcl/system";
 import { createHash } from "node:crypto";
 import { unique, scanFiles } from './libs/utils.mjs';
-import { scanModelFolder, fetchModelFiles, generateItemsFromModels, extractItemsFromTags } from './libs/parseItems.mjs';
+import { scanModelFolder, scanImageFolder, fetchModelFiles, generateItemsFromModels, extractItemsFromTags } from './libs/parseItems.mjs';
 import { scanTagFolder, fetchTagFiles, mergeTags } from './libs/parseTags.mjs';
 
 const knownRecipeTypes = {
@@ -56,6 +56,7 @@ async function gatherModDetails(file){
   })
   crafted = unique(crafted).filter(element=>!!element)
   tagsUsed = unique(tagsUsed).filter(e=>!!e)
+  console.log(await scanImageFolder())
   /*
   used = unique(used).filter(element=>!!element)
   tagsUsed.forEach(tag=>{

@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { fs as fsNode } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { unique, scanFiles } from './utils.mjs';
 
 export async function scanModelFolder(fs){
@@ -19,9 +19,31 @@ export async function scanModelFolder(fs){
   return modelFiles
 }
 
-export async function scanimageFolder(fs){
-  const imageFiles = await fs.readDir(join('workdir','icon-exports-x128'))
-
+export async function scanImageFolder(fs){
+  const imageFiles = await readdir(join('workdir','icon-exports-x128'))
+  const images = imageFiles.map(iconFile=>{
+    const dataSplit = iconFile.split("{");
+    const front = dataSplit.shift()
+    const data = dataSplit.join("{")
+    const frontSplit = front.split("__").filter(x=>x.length>0)
+    const res = {}
+    if(frontSplit.length>2){
+      res.type=frontSplit.shift()
+    }else{
+      res.type='item'
+    }
+    res.namespace = frontSplit.shift()
+    // remove .png if it wasn't part of the data split.
+    res.name = frontSplit.shift().split('.').filter(x=>x!='png').join('.')
+    res.file = iconFile
+    return res
+  })
+  const res = {}
+  images.forEach(image=>{
+    if(!res[image.type]) res[image.type] = [];
+    res[image.type].push(image)
+  })
+  return res
 }
 
 export async function fetchModelFiles(fs,modelFiles){
@@ -64,7 +86,7 @@ export function generateItemsFromModels(models){
       })
     }
   })
-  const itemNames = models.map(x=>{name:x.name,map:x.name}).filter(x=>!overrides.includes(x.split(":")[0]+":item/"+x.split(":")[1]))
+  const itemNames = models.map(x=> ({name:x.name,map:x.name})).filter(x=>!overrides.includes(x.split(":")[0]+":item/"+x.split(":")[1]))
   return itemNames
 }
 
