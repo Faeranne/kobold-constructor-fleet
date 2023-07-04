@@ -1,11 +1,12 @@
 import { resolveJava, DownloadTask, installForgeTask, installJavaRuntimeTask, fetchJavaRuntimeManifest, getVersionList, installTask as installMinecraftTask } from "@xmcl/installer";
-import { join,relative,dirname } from 'node:path'
-import { launch } from '@xmcl/core'
+import { join,relative,dirname,resolve } from 'node:path'
+import { launch, Version } from '@xmcl/core'
 import { platform } from 'node:os'
 import { chmod, readFile, writeFile } from 'node:fs/promises'
+import { mkdirp, copy } from 'fs-extra/esm'
 import { fileURLToPath } from 'node:url'
 
-const localDir = dirname(fileURLToPath(import.meta.url))
+const localDir = resolve('workdir')
 
 export const getJava = () => {
   let executable = ""
@@ -19,6 +20,8 @@ export const getJava = () => {
   }
   return join(localDir,'.java','bin',executable)
 }
+
+
 
 export const installJava = async () => {
   const manifest = await fetchJavaRuntimeManifest();
@@ -56,6 +59,7 @@ const fetchMinecraftVersion = async (version) => {
 
 const installMinecraft = async (version) => {
   const task = installMinecraftTask(version,join(localDir,'resources'))
+
   task.context.onStart = (task) => {
     console.log(`Started task ${task.path}.`)
   }
@@ -155,21 +159,30 @@ export const fetchToolingMods = async () => {
     mods.map((mod)=>{
       return fetchFileTask(mod.download,mod.hash,join(localDir,'minecraft','mods',mod.id+".jar")).startAndWait({
         onStart(task){
-          console.log(`Starting mod download ${mod.name}`);
+          console.log(`Starting mod download ${mod.id}`);
         },
         onSucceed(task){
-          console.log(`Finished mod download ${mod.name}`);
-          local.mods.push(mod)
+          console.log(`Finished mod download ${mod.id}`);
         }
       })
     })
   )
 }
 
-async const cloneToolingFiles = () =>{
+export const cloneToolingFiles = async () => {
+  await copy(join(localDir,'..','tooling'),join(localDir,'minecraft'))
 }
 
 (async ()=>{
-  await installProfile()
-  await launchProfile()
+  await mkdirp(join(localDir,'minecraft'))
+  await mkdirp(join(localDir,'resources'))
+  await mkdirp(join(localDir,'.java'))
+  try{
+    await installProfile()
+    await fetchToolingMods()
+    await cloneToolingFiles()
+    await launchProfile()
+  }catch(e){
+    console.log(`Failed set ${e}`)
+  }
 })()

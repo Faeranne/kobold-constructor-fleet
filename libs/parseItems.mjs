@@ -20,7 +20,7 @@ export async function scanModelFolder(fs){
 }
 
 export async function scanImageFolder(fs){
-  const imageFiles = await readdir(join('workdir','icon-exports-x128'))
+  const imageFiles = await readdir(join('workdir','minecraft','icon-exports-x128'))
   const images = imageFiles.map(iconFile=>{
     const dataSplit = iconFile.split("{");
     const front = dataSplit.shift()
@@ -86,7 +86,7 @@ export function generateItemsFromModels(models){
       })
     }
   })
-  const itemNames = models.map(x=> ({name:x.name,map:x.name})).filter(x=>!overrides.includes(x.split(":")[0]+":item/"+x.split(":")[1]))
+  const itemNames = models.filter(x=>!overrides.includes(x.name.split(":")[0]+":item/"+x.name.split(":")[1])).map(x=>({name:x.name,model:x.name}))
   return itemNames
 }
 
