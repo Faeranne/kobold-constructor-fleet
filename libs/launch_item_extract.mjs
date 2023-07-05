@@ -21,8 +21,6 @@ export const getJava = () => {
   return join(localDir,'.java','bin',executable)
 }
 
-
-
 export const installJava = async () => {
   const manifest = await fetchJavaRuntimeManifest();
   const installTask = installJavaRuntimeTask({destination:join(localDir,'.java'),manifest: manifest})

@@ -1,29 +1,14 @@
 import fetch from 'node-fetch';
-import { readdir } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { resolveFileSystem } from "@xmcl/system";
 import { createHash } from "node:crypto";
 import { unique, scanFiles } from './libs/utils.mjs';
-import { scanModelFolder, scanImageFolder, fetchModelFiles, generateItemsFromModels, extractItemsFromTags } from './libs/parseItems.mjs';
-import { scanTagFolder, fetchTagFiles, mergeTags } from './libs/parseTags.mjs';
+import { getMods } from './libs/generateFiles.mjs';
+import _ from "lodash";
 
 const knownRecipeTypes = {
-}
+};
 
-async function gatherModDetails(file){
-  const jarFS = await resolveFileSystem(file)
-  const itemFiles = await scanModelFolder(jarFS)
-  const itemModels = await fetchModelFiles(jarFS,itemFiles)
-  const modelItems = generateItemsFromModels(itemModels)
-  const tagFiles = await scanTagFolder(jarFS)
-  const tags = await fetchTagFiles(jarFS,tagFiles)
-  const returnedTags = {}
-  mergeTags(returnedTags,tags)
-  const tagItems = extractItemsFromTags(returnedTags)
-  const items = unique(modelItems.concat(tagItems))
-  console.log(items)
-  return {itemModels,tags,items}
-}
 
 (async ()=>{
   /*
@@ -35,29 +20,30 @@ async function gatherModDetails(file){
     }))
   }))
   */
-  let items = []
   let crafted = []
   let used = []
   let tags = []
   let tagsUsed = []
   let recipeTypes = []
   let missingTags = []
-  let mods = (await readdir('./mods'))
-  let modResults = await Promise.all(mods.map(async mod=>{
-    return await gatherModDetails(join('./mods',mod))
-  }))
-  modResults.forEach((mod)=>{
-    items = items.concat(mod.items)
-    //used = used.concat(mod.used)
-    //crafted = crafted.concat(mod.crafted)
-    //Object.assign(tags,mod.tags)
-    //recipeTypes = recipeTypes.concat(mod.recipeTypes)
-    //tagsUsed = tagsUsed.concat(mod.tagsUsed)
-  })
+  const modResults = await getMods()
+  const items = modResults.reduce((result,mod)=>{
+    const items = mod.items.reduce((result,item)=>{
+      const name = item.namespace+":"+item.name
+      let existing = {}
+      if(result[name]){
+        existing = result[name]
+      }
+      result[name]=_.merge(existing,item)
+      return result
+    },{})
+    return _.merge(result,items)
+  },{})
+  await writeFile(join('workdir','items.json'),JSON.stringify(items,null,4))
+  /*
   crafted = unique(crafted).filter(element=>!!element)
   tagsUsed = unique(tagsUsed).filter(e=>!!e)
   console.log(await scanImageFolder())
-  /*
   used = unique(used).filter(element=>!!element)
   tagsUsed.forEach(tag=>{
     if(tags[tag]){

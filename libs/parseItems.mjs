@@ -19,7 +19,7 @@ export async function scanModelFolder(fs){
   return modelFiles
 }
 
-export async function scanImageFolder(fs){
+export async function scanImageFolder(){
   const imageFiles = await readdir(join('workdir','minecraft','icon-exports-x128'))
   const images = imageFiles.map(iconFile=>{
     const dataSplit = iconFile.split("{");
@@ -54,19 +54,20 @@ export async function fetchModelFiles(fs,modelFiles){
       const modelContent = await fs.readFile(join('assets',namespace,'models','item',file+'.json'))
       const model = JSON.parse(modelContent)
       return {
-        model
-        ,name:item
+        model,
+        name: file,
+        namespace: namespace
       }
     })
   )).flat()
   return models
 }
 
-export function generateItemsFromModels(models){
+export function discoverOverrides(models){
   const overrides = []
   models.forEach(item=>{
-    const namespace = item.name.split(":")[0]
-    const name = item.name.split(":")[1]
+    const namespace = item.namespace
+    const name = item.name
     if(item.model.overrides){
       item.model.overrides.forEach(override=>{
         if(override.model){
@@ -80,14 +81,24 @@ export function generateItemsFromModels(models){
           if(overName == namespace && overId == 'item/'+name){
             return
           }else{
-            overrides.push(overName+":"+overId)
+            overrides.push({namespace:overName,name:overId})
           }
         }
       })
     }
   })
-  const itemNames = models.filter(x=>!overrides.includes(x.name.split(":")[0]+":item/"+x.name.split(":")[1])).map(x=>({name:x.name,model:x.name}))
-  return itemNames
+  return overrides
+}
+
+export function generateItemsFromModels(models,overrides){
+  const filteredModels = models.filter(model=>!overrides.some(e=>((e.name=='item/'+model.name)&&(e.namespace==model.namespace))))
+  const items = filteredModels.map(model=>{
+    return {
+      name: model.name,
+      namespace: model.namespace,
+    }
+  })
+  return items
 }
 
 //tags returned from parseTags
@@ -99,7 +110,3 @@ export async function extractItemsFromTags(tags){
   return unique(items)
 }
 
-export async function parseImages(){
-  const icons = fsNode.readdir(join('workdir','icon-exports-x128'))
-
-}

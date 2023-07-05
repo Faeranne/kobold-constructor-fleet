@@ -8,6 +8,8 @@
     "@xmcl/system": "^2.2.6",
     "electron": "^25.2.0",
     "fs-extra": "^11.1.1",
-    "node-fetch": "^3.3.1"
+    "lodash": "^4.17.21",
+    "node-fetch": "^3.3.1",
+    "pouchdb": "^8.0.1"
   }
 }
