@@ -139,8 +139,8 @@ export const fetchToolingMods = async () => {
     },
     {
       id: 'kubejs',
-      hash: '96f75202c917069e8217bfdf90e19d246230eab8138bb3116c42caec9d8cd4c2b8d21002359def25c202322105335d3a457884e47108b7ff14cacd2925184372',
-      download: 'https://cdn.modrinth.com/data/umyGl7zF/versions/MngQb49Q/kubejs-forge-1802.5.5-build.569.jar'
+      hash: 'f4b469df80aee23633342d8302356c69c055c3fcbd9635569e0ee72b148501ede03841a2ad7bf7851ba7d752ba89d5a9cc18ef1069d39a87eee3bc3a50406804',
+      download: 'https://koboldkanun.sfo3.cdn.digitaloceanspaces.com/modpacks/tooling/kubejs-faeranne-tooling.jar'
     },
     {
       id: 'kubejs-ui',

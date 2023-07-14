@@ -1,9 +1,10 @@
 import fetch from 'node-fetch';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from "node:crypto";
 import { unique, scanFiles } from './libs/utils.mjs';
 import { getMods } from './libs/generateFiles.mjs';
+import { scanImageFolder } from './libs/parseItems.mjs';
 import _ from "lodash";
 
 const knownRecipeTypes = {
@@ -11,6 +12,13 @@ const knownRecipeTypes = {
 
 
 (async ()=>{
+  let images = await scanImageFolder();
+  let dataExport = JSON.parse(await readFile(join('workdir','minecraft','kubejs','exported','kubejs-server-export.json')))
+  let imageList = unique(images.item.map(x=>x.namespace+":"+x.name))
+  let missing = dataExport.registries.items.filter(x=>!imageList.includes(x))
+  console.log(missing)
+  await writeFile('missing.json',JSON.stringify(missing))
+  
   /*
   let recipeNamespaces = (await readdir('./crafting_types')).filter(e=>!!e)
   await Promise.all(recipeNamespaces.map(async name=>{
@@ -20,6 +28,7 @@ const knownRecipeTypes = {
     }))
   }))
   */
+  /*
   let crafted = []
   let used = []
   let tags = []
@@ -40,6 +49,7 @@ const knownRecipeTypes = {
     return _.merge(result,items)
   },{})
   await writeFile(join('workdir','items.json'),JSON.stringify(items,null,4))
+  */
   /*
   crafted = unique(crafted).filter(element=>!!element)
   tagsUsed = unique(tagsUsed).filter(e=>!!e)
