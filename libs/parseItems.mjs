@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { readdir } from 'node:fs/promises';
-import { unique, scanFiles } from './utils.mjs';
+import { unique } from './utils.mjs';
+import { scanFiles } from './nodeUtils.mjs';
 
 export async function scanModelFolder(fs){
   const resNS = (await fs.listFiles('assets')).filter(entry=>entry.length>0)

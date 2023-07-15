@@ -2088,6 +2088,7 @@ __metadata:
     esbuild: ^0.18.11
     fs-extra: ^11.1.1
     if-tsb: ^0.4.21
+    jszip: ^3.10.1
     lit: ^2.7.6
     lodash: ^4.17.21
     node-fetch: ^3.3.1
