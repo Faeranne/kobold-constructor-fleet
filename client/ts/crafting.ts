@@ -436,6 +436,34 @@ export class ItemSelector extends LitElement {
   }
 }
 
+const generateDataPack = async () => {
+  const packZip = new JSZip()
+  const mcmeta = JSON.stringify({
+    pack: {
+      pack_format: 8,
+      description: "Generated from Kobold Constructor Fleet"
+    }
+  })
+  packZip.file("pack.mcmeta",mcmeta)
+  packZip.folder('data')
+  Object.keys(global.recipes).forEach(namespace=>{
+    const recipes = global.recipes[namespace]
+    packZip.folder(`data/${namespace}`)
+    packZip.folder(`data/${namespace}/recipes`)
+    Object.keys(recipes).forEach(id=>{
+      const recipeFile = JSON.stringify(recipes[id])
+      packZip.file(`data/${namespace}/recipes/${id}.json`,recipeFile)
+    })
+  })
+  const packBlob = await packZip.generateAsync({type: 'blob'})
+  const link = URL.createObjectURL(packBlob);
+  const a = document.createElement('a');
+  a.download = "pack.zip"
+  a.href = link
+  a.click()
+  URL.revokeObjectURL(link)
+}
+
 const generateItemSelector = ()=>{
   global.selector = new ItemSelector()
   global.selector.items = global.masterList.items
@@ -458,8 +486,10 @@ const insertUploadButton = () => {
 
 const insertExportButton = () => {
   const buttonElement = document.createElement('button')
-  buttonElement.textContent="Download recipe.json"
+  buttonElement.textContent="Download pack.zip"
   buttonElement.addEventListener('click', (e)=>{
+    generateDataPack()
+    /*
     const recipes = JSON.stringify(global.recipes)
     console.log(recipes)
     const toDownload = new Blob([recipes],{type:'data:application/json'});
@@ -470,6 +500,7 @@ const insertExportButton = () => {
     a.href = link
     a.click()
     URL.revokeObjectURL(link)
+    */
   },false)
   document.body.appendChild(buttonElement);
 }
@@ -653,3 +684,4 @@ const chainTags = (tag)=>{
     })
   }
 }
+
