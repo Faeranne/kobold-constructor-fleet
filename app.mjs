@@ -26,8 +26,6 @@ const knownRecipeTypes = {
   missing.forEach((name)=>{
     copyFile(join('undefined.png'),join('workdir','images','items',name+".png"))
   })
-  copyFile(join('empty.png'),join('workdir','images','items','special:empty.png'))
-  copyFile(join('undefined.png'),join('workdir','images','items','special:undefined.png'))
   const zip = new JSZip();
   const imageList = await readdir(join('workdir','images','items'))
   imageList.forEach(imageFile=>{

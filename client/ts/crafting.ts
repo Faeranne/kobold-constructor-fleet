@@ -4,7 +4,11 @@ import {map} from 'lit/directives/map.js';
 import {range} from 'lit/directives/range.js';
 import {classMap} from 'lit/directives/class-map.js';
 import { unique, getKey } from '../../libs/utils.mjs';
+import spinner from '../images/rings.svg';
+import empty from '../images/empty.png';
+import undefined_image from '../images/undefined.png';
 import JSZip from 'jszip'
+
 
 const global = window.global = {images:new Map(),selector:null,recipes:{},masterList:{}}
 
@@ -12,44 +16,104 @@ class AnimationController implements ReactiveController {
   private host: ReactiveControllerHost;
   delay: number
   enabled: bool
-  url: string
+  url: string = spinner
   tagPosition: number = 0
+  tagHash: string
+  tagImages: string[]
+  updating: boolean
 
-  hostConnected(){
-    this.enabled = true
+  async hostConnected(){
+    this.updating = true
     this.tagPosition = 0
     console.log('tag attach')
+    delete this.tagImages
+    this.tagImages = []
+    if(this.host.type=='tag'){
+      await this.updateTags()
+    }
+    this.updating = false
+    this.enabled = true
   }
 
   hostDisconnected(){
     this.enabled = false
+    this.tagHash = null
     console.log('tag dettach')
+  }
+
+  async validateTags(){
+    if(this.updating){
+      return
+    }
+    this.updating = true
+    if(!this.hash){
+      await this.updateTags()
+      this.updating = false
+      return
+    }
+    const encoder = new TextEncoder();
+    const tags = chainTags('#'+this.host.elementid).flat().join(',')
+    const data = encoder.encode(tags)
+    const hash = await crypto.subtle.digest("SHA-256", data)
+    if(this.hash==hash){
+      return
+    }
+    await this.updateTags()
+    this.updating = false
+    return
+  }
+
+  async updateTags(){
+    const tags = chainTags('#'+this.host.elementid).flat()
+    this.url= spinner
+    const images = tags.map(tag=>{
+      if(global.images.has(tag)){
+        return URL.createObjectURL(global.images.get(tag))
+      }else{
+        return undefined_image
+      }
+    })
+    const encoder = new TextEncoder();
+    const data = encoder.encode(tags.join(','))
+    const hash = await crypto.subtle.digest("SHA-256", data)
+    this.hash = hash
+    this.tagImages = images
   }
 
   hostUpdate(){
     if(this.enabled){
       if(this.host.type=="item"){
-        if(global.images.has(this.host.elementid)){
+        if(this.host.elementid.split(":")[0]=='special'){
+          console.log(this.host.elementid)
+          if(this.host.elementid.split(":")[1]=='empty'){
+            this.url = empty
+          }else if(this.host.elementid.split(":")[1]=='loading'){
+            this.url = spinner
+          }else{
+            this.url = undefined_image
+          }
+        }else if(global.images.has(this.host.elementid)){
           this.url= URL.createObjectURL(global.images.get(this.host.elementid))
-        }else if(global.images.has('special:undefined')){
-          this.url= URL.createObjectURL(global.images.get('special:undefined'))
         }else{
-          this.url= "images/undefined.png"
+          this.url= undefined_image
         }
       }else if(this.host.type=="tag"){
-        const tag = chainTags('#'+this.host.elementid).flat()
-        if(this.tagPosition>=tag.length){
-          this.tagPosition=0
-        }
-        if(global.images.has(tag[this.tagPosition])){
-          this.url = URL.createObjectURL(global.images.get(tag[this.tagPosition]))
+        if(!this.updating){
+          if(this.tagPosition>=this.tagImages.length){
+            this.tagPosition=0
+          }
+          if(this.tagImages.length>0){
+            this.url = this.tagImages[this.tagPosition]
+          }
+          setTimeout(async (host)=>{
+            await this.validateTags()
+            this.tagPosition++
+            this.host.requestUpdate();
+          },1000,this)
         }else{
-          this.url = "images/undefined.png"
-        }
-        setTimeout((host)=>{
-          this.tagPosition++
+          this.url= undefined_image
           this.host.requestUpdate();
-        },500,this)
+        }
       }
     }
   }
@@ -95,13 +159,13 @@ export class ItemDisplay extends LitElement {
   `;
 
   @property()
-  elementid = 'empty';
+  elementid = 'special:loading';
 
   @property()
   selected = false;
 
   @property()
-  type: string;
+  type: string = 'item';
 
   private image = new AnimationController(this,1);
 
@@ -128,6 +192,10 @@ export class ItemSlot extends ItemDisplay {
       global.selector.selected = this.elementid
     }
   }
+  changeItem(e){
+    const event = new Event('change', {bubbles: true, composed: rue});
+    this.dispatchEvent(event)
+  }
 }
 
 @customElement('shaped-crafting')
@@ -148,56 +216,86 @@ export class ShapedCrafting extends LitElement {
     item-slot { 
       padding-right: 1%
     }
+    button {
+      width: fit-content;
+    }
   `;
 
   @property()
   result = 'empty';
 
+  @property()
+  recipeId = "";
+
+  @property()
   recipeName = "";
 
   generateRecipe(){
     const grid = this.shadowRoot.querySelector('.grid')
     const items = Array.from(grid.querySelectorAll('item-slot'))
-    const output = items.map(x=>x.elementid)
+    const output = items.map(x=>x.type+"^"+x.elementid)
     const result = output.splice(6,1)[0]
     const usedItems = unique(output)
     const letters = "ABCDEFGHI"
     let processedKey = {}
+    let reverseKey = {}
     usedItems.forEach((item,pos)=>{
-      if(item == "special:empty"){
+      const type = item.split('^')[0]
+      const id = item.split('^')[1]
+      if(id == "special:empty"){
         return
       }
-      processedKey[letters[pos]]=item
+      processedKey[letters[pos]]={}
+      if(type=='item'){
+        processedKey[letters[pos]].item=id
+      }
+      if(type=='tag'){
+        processedKey[letters[pos]].tag=id
+      }
+      reverseKey[item]=letters[pos]
     })
 
-    const processedPattern = output.map(x=>{
-      if(x=="special:empty"){
+    const processedPattern = output.map(item=>{
+      const type = item.split('^')[0]
+      const id = item.split('^')[1]
+      if(id=="special:empty"){
         return " "
       }else{
-        return getKey(processedKey,x)
+        return reverseKey[item]
       }
     })
+    const mergedPattern = processedPattern.join('')
+    const trimmedPattern = mergedPattern.match(/.{1,3}/g)
+    let largestLength = trimmedPattern.reduce((x,y)=>y.trim().length > x ? y.trim().length: x,0)
+    console.log(largestLength)
+    console.log(trimmedPattern)
+    const cleanedPattern = trimmedPattern.map(x=>x.substr(0,largestLength)).filter(x=>x.trim().length>0)
+    console.log(cleanedPattern)
     const finishedRecipe = {
       type:"minecraft:crafting_shaped",
       result:{
-        item: result,
+        item: result.split('^')[1],
       },
-      pattern: processedPattern,
+      pattern: cleanedPattern,
       key: processedKey,
     }
-
+    console.log(finishedRecipe)
     return finishedRecipe
   }
 
   saveRecipe(){
-
+    const namespace = this.shadowRoot.querySelector('#namespace').value 
+    const id = this.shadowRoot.querySelector('#id').value
+    const newName = namespace+":"+id
+    if(newName != this.recipeName){
+      delete global.recipes[namespace][id]
+    }
+    global.recipes[namespace][id]=this.generateRecipe()
   }
 
-  importRecipe(recipe){
-    console.log(this.shadowRoot)
+  importRecipe(recipe,name){
     const grid = this.shadowRoot.querySelector('.grid');
     const items = Array.from(grid.querySelectorAll('item-slot'));
-    console.log(recipe)
     let pattern = recipe.pattern.map(x=>{
       let fix = x.split('')
       while(fix.length<3){
@@ -205,7 +303,7 @@ export class ShapedCrafting extends LitElement {
       }
       return fix.join('')
     }).map(x=>x.split('')).flat()
-    while(pattern.length<8){
+    while(pattern.length<9){
       pattern.push(' ')
     }
     pattern = pattern.map(x=>{
@@ -226,6 +324,9 @@ export class ShapedCrafting extends LitElement {
       items[slot].type=item.type
       items[slot].elementid=item.value
     })
+    this.recipeName = name
+    this.shadowRoot.querySelector('#namespace').value = name.split(":")[0]
+    this.shadowRoot.querySelector('#id').value = name.split(":")[1]
   }
 
   async clearGrid(){
@@ -233,16 +334,23 @@ export class ShapedCrafting extends LitElement {
     const items = Array.from(grid.querySelectorAll('item-slot'))
     console.log(items)
     items.forEach(item=>{
-      item.elementid = "special:empty"
+      item.elementid = "special:loading"
     })
   }
 
+  itemChanged(e){
+
+  }
+
   render() {
+
     return html`
       <div class="grid">
-        <div class="row">${map(range(0,3), (e)=>html`<item-slot elementid=""/>`)}</div>
-        <div class="row">${map(range(3,6), (e)=>html`<item-slot elementid=""/>`)}<div class="gap"></div><item-slot elementid=""/></div>
-        <div class="row">${map(range(6,9), (e)=>html`<item-slot elementid=""/>`)}</div>
+        <input type='text' id='namespace' placeholder="Namespace"/><input type='text' id='id' placeholder="Recipe ID"/>
+        <div class="row">${map(range(0,3), (e)=>html`<item-slot elementid="" @change="${this.itemChanged}"/>`)}</div>
+        <div class="row">${map(range(3,6), (e)=>html`<item-slot elementid="" @change="${this.itemChanged}"/>`)}<div class="gap"></div><item-slot elementid="" @change="${this.itemChanged}"/></div>
+        <div class="row">${map(range(6,9), (e)=>html`<item-slot elementid="" @change="${this.itemChanged}"/>`)}</div>
+        <button @click="${this.saveRecipe}">Save</button>
       </div>
     `
   }
@@ -339,13 +447,31 @@ const generateItemSelector = ()=>{
   document.body.prepend(global.selector)
 }
 
-const insertUploadButton = () =>{
+const insertUploadButton = () => {
   const inputElement = document.createElement('input')
   inputElement.type = 'file'
   inputElement.addEventListener('change', (e)=>{
     loadPackage(e.target.files[0])
   },false);
   document.body.appendChild(inputElement);
+}
+
+const insertExportButton = () => {
+  const buttonElement = document.createElement('button')
+  buttonElement.textContent="Download recipe.json"
+  buttonElement.addEventListener('click', (e)=>{
+    const recipes = JSON.stringify(global.recipes)
+    console.log(recipes)
+    const toDownload = new Blob([recipes],{type:'data:application/json'});
+    console.log(toDownload)
+    const link = URL.createObjectURL(toDownload);
+    const a = document.createElement('a');
+    a.download = "recipes.json"
+    a.href = link
+    a.click()
+    URL.revokeObjectURL(link)
+  },false)
+  document.body.appendChild(buttonElement);
 }
 
 const replaceGrid = async (type) => {
@@ -360,7 +486,7 @@ const replaceGrid = async (type) => {
 }
 
 const insertRecipeList = () => {
-  const recipes = global.recipes = document.createElement('select')
+  const recipes = global.recipeList = document.createElement('select')
   recipes.multipe=true
   recipes.size="30"
   recipes.style = css`
@@ -387,7 +513,7 @@ const loadRecipe = (name)=>{
   if(Object.keys(recipeTypes).includes(recipe.type)){
     replaceGrid(recipeTypes[recipe.type])
     setTimeout(()=>{
-      global.grid.importRecipe(recipe)
+      global.grid.importRecipe(recipe,name)
     },50)
   }
 }
@@ -395,12 +521,12 @@ const loadRecipe = (name)=>{
 const addRecipe = (name,type) => {
   const namespace = name.split(':')[0]
   const id = name.split(':')[1]
-  let namespaceCatagory = global.recipes.querySelector('optgroup#'+namespace)
+  let namespaceCatagory = global.recipeList.querySelector('optgroup#'+namespace)
   if(!namespaceCatagory){
     namespaceCatagory = document.createElement('optgroup')
     namespaceCatagory.id = namespace
     namespaceCatagory.label = namespace
-    global.recipes.appendChild(namespaceCatagory)
+    global.recipeList.appendChild(namespaceCatagory)
   }
   const selectorId = id.split('/').join('\\')
   if(!namespaceCatagory.querySelector('#'+selectorId)){
@@ -421,6 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
   replaceGrid(recipeTypes['minecraft:crafting_shaped'])
   insertRecipeList()
   insertUploadButton()
+  insertExportButton()
 },false)
 
 const parseTagsIntoImages = async (tags) => {
