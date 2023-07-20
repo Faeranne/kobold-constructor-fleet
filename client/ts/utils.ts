@@ -15,7 +15,7 @@
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-const global = window.global
+import { global } from './store.ts'
 
 export const chainTags = (tag)=>{
   const splitTest = tag.split('#')
@@ -30,30 +30,3 @@ export const chainTags = (tag)=>{
   }
 }
 
-export const generateDataPack = async () => {
-  const packZip = new JSZip()
-  const mcmeta = JSON.stringify({
-    pack: {
-      pack_format: 8,
-      description: "Generated from Kobold Constructor Fleet"
-    }
-  })
-  packZip.file("pack.mcmeta",mcmeta)
-  packZip.folder('data')
-  Object.keys(global.recipes).forEach(namespace=>{
-    const recipes = global.recipes[namespace]
-    packZip.folder(`data/${namespace}`)
-    packZip.folder(`data/${namespace}/recipes`)
-    Object.keys(recipes).forEach(id=>{
-      const recipeFile = JSON.stringify(recipes[id])
-      packZip.file(`data/${namespace}/recipes/${id}.json`,recipeFile)
-    })
-  })
-  const packBlob = await packZip.generateAsync({type: 'blob'})
-  const link = URL.createObjectURL(packBlob);
-  const a = document.createElement('a');
-  a.download = "pack.zip"
-  a.href = link
-  a.click()
-  URL.revokeObjectURL(link)
-}

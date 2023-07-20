@@ -18,6 +18,7 @@
 import {ReactiveController, ReactiveControllerHost} from 'lit';
 
 import { chainTags } from './utils.ts'
+import { global } from './store.ts'
 
 import spinner from '../images/rings.svg';
 import empty from '../images/empty.png';

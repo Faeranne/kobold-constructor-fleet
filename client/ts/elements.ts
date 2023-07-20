@@ -21,6 +21,7 @@ import {classMap} from 'lit/directives/class-map.js';
 import {map} from 'lit/directives/map.js';
 
 import { AnimationController } from './controllers.ts'
+import { global } from './store.ts'
 
 @customElement('item-display')
 export class ItemDisplay extends LitElement {

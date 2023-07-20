@@ -25,8 +25,8 @@ import undefined_image from '../images/undefined.png';
 import { chainTags } from './utils.ts'
 import { ItemDisplay } from './elements.ts'
 import { ShapedCrafting } from './recipes/minecraft/crafting_shaped.ts'
+import { global } from './store.ts'
 
-const global = window.global = {images:new Map(),selector:null,recipes:{},masterList:{}}
 
 export const recipeTypes = {
   'minecraft:crafting_shaped': ShapedCrafting
