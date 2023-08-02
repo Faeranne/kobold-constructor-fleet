@@ -25,11 +25,13 @@ import undefined_image from '../images/undefined.png';
 import { chainTags } from './utils.ts'
 import { ItemDisplay } from './elements.ts'
 import { ShapedCrafting } from './recipes/minecraft/crafting_shaped.ts'
+import { ShapelessCrafting } from './recipes/minecraft/crafting_shapeless.ts'
 import { global } from './store.ts'
 
 
 export const recipeTypes = {
-  'minecraft:crafting_shaped': ShapedCrafting
+  'minecraft:crafting_shaped': ShapedCrafting,
+  'minecraft:crafting_shapeless': ShapelessCrafting,
 }
 
 @customElement('item-slot')

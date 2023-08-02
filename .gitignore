@@ -3,5 +3,5 @@
 mods
 node_modules
 resources
-minecraft
+/minecraft/
 workdir
